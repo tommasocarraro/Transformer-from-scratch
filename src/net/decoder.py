@@ -1,6 +1,6 @@
 import torch
 from embeddings import EmbeddingLayer, PositionalEncoding
-from mh_attention import MultiHeadedAttention
+from attention import Attention
 from feed_forward import FeedForward
 
 
@@ -19,24 +19,30 @@ class DecoderLayer(torch.nn.Module):
         """
         super(DecoderLayer, self).__init__()
         self.feed_forward = FeedForward(emb_size, hidden_size)
-        self.attention = MultiHeadedAttention(num_heads, emb_size)
+        self.attention = Attention(num_heads, emb_size)
         self.dropout = torch.nn.Dropout(dropout)
         self.layer_norm = torch.nn.LayerNorm(emb_size)
 
-    def forward(self, embeddings, encoder_outputs):
+    def forward(self, embeddings, encoder_outputs, padding_mask_enc, padding_mask_dec):
         """
         Forward pass of the transformer decoder layer.
 
         :param embeddings: input token embeddings
         :param encoder_outputs: encoder outputs
+        :param padding_mask_enc: padding mask to avoid the padding token to be included in the attention computation
+        of the encoder
+        :param padding_mask_dec: padding mask to avoid the padding token to be included in the attention computation of
+        the decoder
         :return: transformed token embeddings with attention
         """
         # masked attention
-        attention_embeddings = self.attention(embeddings, mask=True)
+        attention_embeddings = self.attention(embeddings, embeddings, embeddings,
+                                              autoregressive_mask=True, padding_mask=padding_mask_dec)
         attention_embeddings = self.dropout(attention_embeddings)
         intermediate_embeddings = self.layer_norm(embeddings + attention_embeddings)
         # attention with key and values coming from encoder and queries from decoder
-        intermediate_attention_embeddings = self.attention(encoder_outputs, intermediate_embeddings)
+        intermediate_attention_embeddings = self.attention(q=intermediate_embeddings, k=encoder_outputs,
+                                                           v=encoder_outputs, padding_mask=padding_mask_enc)
         intermediate_attention_embeddings = self.dropout(intermediate_attention_embeddings)
         pre_feed_forward = self.layer_norm(intermediate_embeddings + intermediate_attention_embeddings)
         # feed-forward network
@@ -67,17 +73,21 @@ class TransformerDecoder(torch.nn.Module):
                                             for _ in range(num_layers)])
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, tokens, encoder_outputs):
+    def forward(self, tokens, encoder_outputs, padding_mask_enc, padding_mask_dec):
         """
         Forward pass of the transformer decoder.
 
         :param tokens: input tokens
         :param encoder_outputs: encoder outputs
+        :param padding_mask_enc: padding mask to avoid the padding token to be included in the attention computation
+        of the encoder
+        :param padding_mask_dec: padding mask to avoid the padding token to be included in the attention computation of
+        the decoder
         :return: encoder output
         """
         embeddings = self.embedding_layer(tokens)
         embeddings = self.positional_encoding(embeddings)
         embeddings = self.dropout(embeddings)
         for layer in self.decoder:
-            embeddings = layer(embeddings, encoder_outputs)
+            embeddings = layer(embeddings, encoder_outputs, padding_mask_enc, padding_mask_dec)
         return embeddings

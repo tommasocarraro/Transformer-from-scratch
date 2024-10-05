@@ -1,6 +1,6 @@
 import torch
 from embeddings import EmbeddingLayer, PositionalEncoding
-from mh_attention import MultiHeadedAttention
+from attention import Attention
 from feed_forward import FeedForward
 
 
@@ -19,18 +19,19 @@ class EncoderLayer(torch.nn.Module):
         """
         super(EncoderLayer, self).__init__()
         self.feed_forward = FeedForward(emb_size, hidden_size)
-        self.attention = MultiHeadedAttention(num_heads, emb_size)
+        self.attention = Attention(num_heads, emb_size)
         self.dropout = torch.nn.Dropout(dropout)
         self.layer_norm = torch.nn.LayerNorm(emb_size)
 
-    def forward(self, embeddings):
+    def forward(self, embeddings, padding_mask):
         """
         Forward pass of the transformer encoder layer.
 
         :param embeddings: input token embeddings
+        :param padding_mask: mask to avoid the padding tokens to be included in the attention computation
         :return: transformed token embeddings with attention
         """
-        attention_embeddings = self.attention(embeddings)
+        attention_embeddings = self.attention(embeddings, embeddings, embeddings, padding_mask=padding_mask)
         attention_embeddings = self.dropout(attention_embeddings)
         intermediate_embeddings = self.layer_norm(embeddings + attention_embeddings)
         feed_forward_embeddings = self.feed_forward(intermediate_embeddings)
@@ -60,16 +61,17 @@ class TransformerEncoder(torch.nn.Module):
                                             for _ in range(num_layers)])
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, tokens):
+    def forward(self, tokens, padding_mask):
         """
         Forward pass of the transformer encoder.
 
         :param tokens: input tokens
+        :param padding_mask: mask to avoid the padding tokens to be included in the attention computation
         :return: encoder output
         """
         embeddings = self.embedding_layer(tokens)
         embeddings = self.positional_encoding(embeddings)
         embeddings = self.dropout(embeddings)
         for layer in self.encoder:
-            embeddings = layer(embeddings)
+            embeddings = layer(embeddings, padding_mask)
         return embeddings
