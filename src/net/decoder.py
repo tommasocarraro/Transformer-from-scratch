@@ -8,6 +8,7 @@ class DecoderLayer(torch.nn.Module):
     """
     Architecture of the transformer decoder layer.
     """
+
     def __init__(self, emb_size, num_heads, hidden_size, dropout):
         """
         Constructor for the transformer decoder layer.
@@ -19,7 +20,8 @@ class DecoderLayer(torch.nn.Module):
         """
         super(DecoderLayer, self).__init__()
         self.feed_forward = FeedForward(emb_size, hidden_size)
-        self.attention = Attention(num_heads, emb_size)
+        self.self_attention = Attention(num_heads, emb_size)
+        self.cross_attention = Attention(num_heads, emb_size)
         self.dropout = torch.nn.Dropout(dropout)
         self.layer_norm_1 = torch.nn.LayerNorm(emb_size)
         self.layer_norm_2 = torch.nn.LayerNorm(emb_size)
@@ -38,13 +40,13 @@ class DecoderLayer(torch.nn.Module):
         :return: transformed token embeddings with attention
         """
         # masked attention
-        attention_embeddings = self.attention(embeddings, embeddings, embeddings,
-                                              autoregressive_mask=True, padding_mask=padding_mask_dec)
+        attention_embeddings = self.self_attention(embeddings, embeddings, embeddings,
+                                                   autoregressive_mask=True, padding_mask=padding_mask_dec)
         attention_embeddings = self.dropout(attention_embeddings)
         intermediate_embeddings = self.layer_norm_1(embeddings + attention_embeddings)
         # attention with key and values coming from encoder and queries from decoder
-        intermediate_attention_embeddings = self.attention(q=intermediate_embeddings, k=encoder_outputs,
-                                                           v=encoder_outputs, padding_mask=padding_mask_enc)
+        intermediate_attention_embeddings = self.cross_attention(q=intermediate_embeddings, k=encoder_outputs,
+                                                                 v=encoder_outputs, padding_mask=padding_mask_enc)
         intermediate_attention_embeddings = self.dropout(intermediate_attention_embeddings)
         pre_feed_forward = self.layer_norm_2(intermediate_embeddings + intermediate_attention_embeddings)
         # feed-forward network
@@ -57,6 +59,7 @@ class TransformerDecoder(torch.nn.Module):
     """
     Transformer decoder architecture.
     """
+
     def __init__(self, voc_size, emb_size, num_heads, hidden_size, dropout, num_layers):
         """
         Constructor for the transformer decoder architecture.
