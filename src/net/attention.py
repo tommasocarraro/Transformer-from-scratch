@@ -42,9 +42,9 @@ class Attention(torch.nn.Module):
         v_prime = self.wv(v)
 
         # split matrices into different heads before applying attention
-        q_prime = q_prime.view(-1, self.num_heads, q_prime.shape[1], self.embedding_size // self.num_heads)
-        k_prime = k_prime.view(-1, self.num_heads, k_prime.shape[1], self.embedding_size // self.num_heads)
-        v_prime = v_prime.view(-1, self.num_heads, v_prime.shape[1], self.embedding_size // self.num_heads)
+        q_prime = q_prime.view(-1, q_prime.shape[1], self.num_heads, self.embedding_size // self.num_heads).transpose(1, 2)
+        k_prime = k_prime.view(-1, k_prime.shape[1], self.num_heads, self.embedding_size // self.num_heads).transpose(1, 2)
+        v_prime = v_prime.view(-1, v_prime.shape[1], self.num_heads, self.embedding_size // self.num_heads).transpose(1, 2)
 
         # compute the attentions of the different heads in a single step
         qk = torch.matmul(q_prime, k_prime.permute(0, 1, 3, 2)) / math.sqrt(self.embedding_size // self.num_heads)
