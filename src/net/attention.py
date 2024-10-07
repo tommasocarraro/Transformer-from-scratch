@@ -52,11 +52,11 @@ class Attention(torch.nn.Module):
         # auto-regressive mask
         if autoregressive_mask:
             attention_mask = torch.tril(torch.ones(q_prime.shape[2], q_prime.shape[2]))
-            qk = qk.masked_fill(attention_mask == 0, float('-inf'))
+            qk = qk.masked_fill(attention_mask == 0, -1e9)
 
         # padding mask
         if padding_mask is not None:
-            qk = qk.masked_fill(padding_mask == 1, float('-inf'))
+            qk = qk.masked_fill(padding_mask == 1, -1e9)
 
         # compute the softmax
         qk_softmax = torch.nn.functional.softmax(qk, dim=-1)

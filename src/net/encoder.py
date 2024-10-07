@@ -1,7 +1,7 @@
 import torch
-from embeddings import EmbeddingLayer, PositionalEncoding
-from attention import Attention
-from feed_forward import FeedForward
+from .embeddings import EmbeddingLayer, PositionalEncoding
+from .attention import Attention
+from .feed_forward import FeedForward
 
 
 class EncoderLayer(torch.nn.Module):
@@ -21,7 +21,10 @@ class EncoderLayer(torch.nn.Module):
         self.feed_forward = FeedForward(emb_size, hidden_size)
         self.attention = Attention(num_heads, emb_size)
         self.dropout = torch.nn.Dropout(dropout)
-        self.layer_norm = torch.nn.LayerNorm(emb_size)
+        # layer normalization aggregates features in different samples (good for NLP)
+        # batch normalization aggregates the features of the samples independently (good for CV)
+        self.layer_norm_1 = torch.nn.LayerNorm(emb_size)
+        self.layer_norm_2 = torch.nn.LayerNorm(emb_size)
 
     def forward(self, embeddings, padding_mask):
         """
@@ -33,10 +36,10 @@ class EncoderLayer(torch.nn.Module):
         """
         attention_embeddings = self.attention(embeddings, embeddings, embeddings, padding_mask=padding_mask)
         attention_embeddings = self.dropout(attention_embeddings)
-        intermediate_embeddings = self.layer_norm(embeddings + attention_embeddings)
+        intermediate_embeddings = self.layer_norm_1(embeddings + attention_embeddings)
         feed_forward_embeddings = self.feed_forward(intermediate_embeddings)
         feed_forward_embeddings = self.dropout(feed_forward_embeddings)
-        return self.layer_norm(intermediate_embeddings + feed_forward_embeddings)
+        return self.layer_norm_2(intermediate_embeddings + feed_forward_embeddings)
 
 
 class TransformerEncoder(torch.nn.Module):
