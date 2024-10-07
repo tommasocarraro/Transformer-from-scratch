@@ -72,8 +72,8 @@ class Trainer:
         progress_bar = tqdm(train_loader, desc="Batches of epoch %d" % (epoch_idx, ), unit="batch")
         for batch_idx, (source_sentences, target_sentences) in enumerate(progress_bar):
             self.optimizer.zero_grad()
-            preds = self.transformer_model(source_sentences.to(get_device()), target_sentences.to(get_device()))
-            loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]), target_sentences.view(-1).to(get_device()))
+            preds = self.transformer_model(source_sentences.to(get_device()), target_sentences[:, :-1].to(get_device()))
+            loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]), target_sentences[:, 1:].view(-1).to(get_device()))
             loss.backward()
             self.optimizer.step()
             train_loss += loss.item()
