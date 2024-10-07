@@ -60,14 +60,13 @@ class TransformerNet(torch.nn.Module):
 
         # initialize the input for the decoder with SOS tokens
         batch_size = tokens_enc.shape[0]
-        decoder_input = torch.full((batch_size, 1), self.sos_token)
+        decoder_input = torch.full((batch_size, 1), self.sos_token).to(get_device())
 
         # Store parallel generated sequences
         generated_sequences = []
 
         for _ in range(max_seq_length):
-            decoder_output = self.decoder(decoder_input.to(get_device()), encoder_output,
-                                          padding_mask_enc=padding_mask_enc)
+            decoder_output = self.decoder(decoder_input, encoder_output, padding_mask_enc=padding_mask_enc)
             next_token = decoder_output[:, -1, :].argmax(dim=-1, keepdim=True)
             decoder_input = torch.cat((decoder_input, next_token), dim=1)
             generated_sequences.append(next_token)
