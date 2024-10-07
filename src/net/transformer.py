@@ -1,6 +1,7 @@
 import torch
 from .encoder import TransformerEncoder
 from .decoder import TransformerDecoder
+from src import get_device
 
 
 class TransformerNet(torch.nn.Module):
@@ -39,8 +40,8 @@ class TransformerNet(torch.nn.Module):
         :param tokens_dec: tokens in input to decoder
         :return: the transformer output (logits no probabilities)
         """
-        padding_mask_enc = (tokens_enc != self.padding_token).unsqueeze(1).unsqueeze(2)
-        padding_mask_dec = (tokens_dec != self.padding_token).unsqueeze(1).unsqueeze(2)
+        padding_mask_enc = (tokens_enc != self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
+        padding_mask_dec = (tokens_dec != self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
         encoder_out = self.encoder(tokens_enc, padding_mask_enc)
         decoder_out = self.decoder(tokens_dec, encoder_out, padding_mask_enc, padding_mask_dec)
         return self.linear_layer(decoder_out)
@@ -54,7 +55,7 @@ class TransformerNet(torch.nn.Module):
         :return: the predicted tokens in the target language
         """
         # get encoder output for the given source sentences
-        padding_mask_enc = (tokens_enc != self.padding_token).unsqueeze(1).unsqueeze(2)
+        padding_mask_enc = (tokens_enc != self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
         encoder_output = self.encoder(tokens_enc, padding_mask_enc)
 
         # initialize the input for the decoder with SOS tokens

@@ -1,5 +1,5 @@
 import math
-
+from src import get_device
 import torch
 
 
@@ -51,7 +51,7 @@ class Attention(torch.nn.Module):
 
         # auto-regressive mask
         if autoregressive_mask:
-            attention_mask = torch.tril(torch.ones(q_prime.shape[2], q_prime.shape[2]))
+            attention_mask = torch.tril(torch.ones(q_prime.shape[2], q_prime.shape[2])).to(get_device())
             qk = qk.masked_fill(attention_mask == 0, -1e9)
 
         # padding mask
