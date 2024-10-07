@@ -66,7 +66,8 @@ class TransformerNet(torch.nn.Module):
         generated_sequences = []
 
         for _ in range(max_seq_length):
-            decoder_output = self.decoder(decoder_input, encoder_output, padding_mask_enc=padding_mask_enc)
+            decoder_output = self.decoder(decoder_input, encoder_output.to(get_device()),
+                                          padding_mask_enc=padding_mask_enc)
             next_token = decoder_output[:, -1, :].argmax(dim=-1, keepdim=True)
             decoder_input = torch.cat((decoder_input, next_token), dim=1)
             generated_sequences.append(next_token)
