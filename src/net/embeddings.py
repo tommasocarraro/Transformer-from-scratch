@@ -1,4 +1,5 @@
 import torch
+from src import get_device
 
 
 class EmbeddingLayer(torch.nn.Module):
@@ -60,5 +61,5 @@ class PositionalEncoding(torch.nn.Module):
         :return: embeddings with positional encoding applied
         """
         seq_len = sequence_embeddings.size(1)
-        return sequence_embeddings + self.pos_enc[:, :seq_len, :]
+        return sequence_embeddings + self.pos_enc[:, :seq_len, :].to(get_device())
 

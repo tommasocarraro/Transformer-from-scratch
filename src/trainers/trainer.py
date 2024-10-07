@@ -1,6 +1,7 @@
 import torch
 from tqdm import tqdm
-from .utils import tokens_to_sentences, get_device
+from .utils import tokens_to_sentences
+from src import get_device
 
 
 class Trainer:
