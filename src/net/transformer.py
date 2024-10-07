@@ -27,7 +27,7 @@ class TransformerNet(torch.nn.Module):
         super(TransformerNet, self).__init__()
         self.encoder = TransformerEncoder(voc_size_enc, emb_size, num_heads, hidden_size, dropout, num_layers)
         self.decoder = TransformerDecoder(voc_size_dec, emb_size, num_heads, hidden_size, dropout, num_layers)
-        self.linear_layer = torch.nn.Linear(emb_size, voc_size_dec, bias=False)
+        self.linear_layer = torch.nn.Linear(emb_size, voc_size_dec, bias=True)
         self.padding_token = padding_token
         self.sos_token = sos_token
         self.eos_token = eos_token
