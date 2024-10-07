@@ -1,6 +1,6 @@
 import torch
 from tqdm import tqdm
-from .utils import tokens_to_sentences
+from .utils import tokens_to_sentences, get_device
 
 
 class Trainer:
@@ -13,7 +13,7 @@ class Trainer:
 
         :param transformer_model: transformer model
         """
-        self.transformer_model = transformer_model
+        self.transformer_model = transformer_model.to(get_device())
         self.optimizer = optimizer
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss(ignore_index=self.transformer_model.padding_token)
 
@@ -53,7 +53,7 @@ class Trainer:
         val_loss = 0.0
         for batch_idx, (source_sentences, target_sentences) in enumerate(val_loader):
             with torch.no_grad():
-                preds = self.transformer_model(source_sentences, target_sentences)
+                preds = self.transformer_model(source_sentences.to(get_device()), target_sentences.to(get_device()))
                 loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]), target_sentences.view(-1))
                 val_loss += loss.item()
         return val_loss / len(val_loader)
@@ -70,7 +70,7 @@ class Trainer:
         progress_bar = tqdm(train_loader, desc="Batches of epoch %d" % (epoch_idx, ), unit="batch")
         for batch_idx, (source_sentences, target_sentences) in enumerate(progress_bar):
             self.optimizer.zero_grad()
-            preds = self.transformer_model(source_sentences, target_sentences)
+            preds = self.transformer_model(source_sentences.to(get_device()), target_sentences.to(get_device()))
             loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]), target_sentences.view(-1))
             loss.backward()
             self.optimizer.step()
@@ -92,6 +92,6 @@ class Trainer:
         self.transformer_model.eval()
         predictions = []
         for batch_idx, (source_sentences, _) in enumerate(inference_loader):
-            preds = self.transformer_model.infer(source_sentences, max_seq_len)
+            preds = self.transformer_model.infer(source_sentences.to(get_device()), max_seq_len)
             predictions.append(preds)
         return tokens_to_sentences(torch.cat(predictions), target_vocab, padding_token, eos_token)
