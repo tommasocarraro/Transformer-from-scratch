@@ -18,7 +18,7 @@ class Trainer:
         self.optimizer = optimizer
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss(ignore_index=self.transformer_model.padding_token)
 
-    def train(self, train_loader, n_epochs, val_loader=None, verbose=1):
+    def train(self, train_loader, n_epochs, val_loader=None, verbose=1, early=None, save_path=None):
         """
         Train the transformer model.
 
@@ -26,8 +26,11 @@ class Trainer:
         :param n_epochs: number of epochs for training
         :param val_loader: loader for the validation data
         :param verbose: logging verbosity
+        :param early: number of epochs for early stopping. If it is not None, early stopping is performed and at the
+        end of the training the best model weights are loaded
+        :param save_path: path to save the model
         """
-        self.transformer_model.train()
+        early_counter, best_val_score = 0, 0
         for epoch in range(n_epochs):
             # training step
             train_loss = self.train_epoch(train_loader, epoch + 1)
@@ -38,16 +41,39 @@ class Trainer:
                 print("Epoch %d - Train loss %.3f - Validation CE_Loss %.3f"
                       % (epoch + 1, train_loss, val_score))
             # save best model and update early stop counter, if necessary
-            # if val_score > best_val_score:
-            #     best_val_score = val_score
-            #     early_counter = 0
-            #     if save_path:
-            #         self.save_model(save_path)
-            # else:
-            #     early_counter += 1
-            #     if early is not None and early_counter > early:
-            #         print("Training interrupted due to early stopping")
-            #         break
+            if val_score > best_val_score:
+                best_val_score = val_score
+                early_counter = 0
+                if save_path:
+                    self.save_model(save_path)
+            else:
+                early_counter += 1
+                if early is not None and early_counter > early:
+                    print("Training interrupted due to early stopping")
+                    print("Loading best weights in the model")
+                    self.load_model(save_path)
+                    break
+
+    def save_model(self, save_path):
+        """
+        Save the model to the given path.
+
+        :param save_path: path to save the model
+        """
+        torch.save({
+            'model_state_dict': self.transformer_model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict()
+        }, save_path)
+
+    def load_model(self, path):
+        """
+        Method for loading the model.
+
+        :param path: path from which the model has to be loaded.
+        """
+        checkpoint = torch.load(path)
+        self.transformer_model.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     def validate(self, val_loader):
         self.transformer_model.eval()
@@ -69,6 +95,7 @@ class Trainer:
         :param epoch_idx: index of the current epoch
         :return: loss function averaged over all batches
         """
+        self.transformer_model.train()
         train_loss = 0.0
         progress_bar = tqdm(train_loader, desc="Batches of epoch %d" % (epoch_idx, ), unit="batch")
         for batch_idx, (source_sentences, target_sentences) in enumerate(progress_bar):
