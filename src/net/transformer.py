@@ -9,7 +9,7 @@ class TransformerNet(torch.nn.Module):
     Network architecture of the Transformer model.
     """
     def __init__(self, voc_size_enc, voc_size_dec, padding_token, sos_token, eos_token, emb_size, num_heads,
-                 hidden_size, dropout, num_layers):
+                 hidden_size, dropout, num_layers, pre_norm=False):
         """
         Constructor for the Transformer model.
 
@@ -23,6 +23,7 @@ class TransformerNet(torch.nn.Module):
         :param hidden_size: number of neurons in the hidden layer of feed-forward network
         :param dropout: dropout rate
         :param num_layers: number of layers for encoder and decoder
+        :param pre_norm: whether to use pre-normalization instead of post-normalization for layer normalization
         """
         super(TransformerNet, self).__init__()
         self.encoder = TransformerEncoder(voc_size_enc, emb_size, num_heads, hidden_size, dropout, num_layers)
@@ -31,6 +32,7 @@ class TransformerNet(torch.nn.Module):
         self.padding_token = padding_token
         self.sos_token = sos_token
         self.eos_token = eos_token
+        self.pre_norm = pre_norm
 
     def forward(self, tokens_enc, tokens_dec):
         """
@@ -42,8 +44,8 @@ class TransformerNet(torch.nn.Module):
         """
         padding_mask_enc = (tokens_enc == self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
         padding_mask_dec = (tokens_dec == self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
-        encoder_out = self.encoder(tokens_enc, padding_mask_enc)
-        decoder_out = self.decoder(tokens_dec, encoder_out, padding_mask_enc, padding_mask_dec)
+        encoder_out = self.encoder(tokens_enc, padding_mask_enc, pre_norm=self.pre_norm)
+        decoder_out = self.decoder(tokens_dec, encoder_out, padding_mask_enc, padding_mask_dec, pre_norm=self.pre_norm)
         return self.linear_layer(decoder_out)
 
     def infer(self, tokens_enc, max_seq_length):
