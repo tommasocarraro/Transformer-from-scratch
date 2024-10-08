@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 from .utils import tokens_to_sentences
 from src import get_device
+from torch.optim.lr_scheduler import LambdaLR
 
 
 class Trainer:
@@ -9,15 +10,32 @@ class Trainer:
     Generic trainer for the translation task.
     """
 
-    def __init__(self, transformer_model, optimizer):
+    def __init__(self, transformer_model, optimizer, lr_scheduler=False):
         """
         Initialize the trainer with the given transformer model.
 
         :param transformer_model: transformer model
+        :param optimizer: optimizer
+        :param scheduler: lr scheduler
         """
         self.transformer_model = transformer_model.to(get_device())
         self.optimizer = optimizer
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss(ignore_index=self.transformer_model.padding_token)
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler:
+            def lr_lambda(step):
+                """
+                Learning rate scheduler as proposed in the original paper.
+
+                :param step: step number
+                :return: new learning rate value
+                """
+                warmup_steps = 4000
+                d_model = 512  # or any other model size
+                step = max(1, step)
+                return d_model ** -0.5 * min(step ** -0.5, step * warmup_steps ** -1.5)
+
+            self.scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     def train(self, train_loader, n_epochs, val_loader=None, verbose=1, early=None, save_path=None):
         """
@@ -114,6 +132,8 @@ class Trainer:
             train_acc += acc
             progress_bar.set_postfix({"CE_Loss": loss.item()})
             progress_bar.set_postfix({"Train_Acc": acc})
+        if self.lr_scheduler:
+            self.scheduler.step()
         return train_loss / len(train_loader), train_acc / len(train_loader)
 
     def infer(self, inference_loader, max_seq_len, target_vocab, padding_token, eos_token):
