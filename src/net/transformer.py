@@ -54,11 +54,12 @@ class TransformerNet(torch.nn.Module):
 
         :param tokens_enc: tokens in input to encoder
         :param max_seq_length: maximum sequence length to stop the generation
+        :param pre_norm: whether to use pre-normalization instead of post-normalization for layer normalization
         :return: the predicted tokens in the target language
         """
         # get encoder output for the given source sentences
         padding_mask_enc = (tokens_enc == self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
-        encoder_output = self.encoder(tokens_enc, padding_mask_enc)
+        encoder_output = self.encoder(tokens_enc, padding_mask_enc, pre_norm=self.pre_norm)
 
         # initialize the input for the decoder with SOS tokens
         batch_size = tokens_enc.shape[0]
@@ -68,7 +69,8 @@ class TransformerNet(torch.nn.Module):
         generated_sequences = []
 
         for _ in range(max_seq_length):
-            decoder_output = self.decoder(decoder_input, encoder_output, padding_mask_enc=padding_mask_enc)
+            decoder_output = self.decoder(decoder_input, encoder_output, padding_mask_enc=padding_mask_enc,
+                                          pre_norm=self.pre_norm)
             next_token = decoder_output[:, -1, :].argmax(dim=-1, keepdim=True)
             decoder_input = torch.cat((decoder_input, next_token), dim=1)
             generated_sequences.append(next_token)
