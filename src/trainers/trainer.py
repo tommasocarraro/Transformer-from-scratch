@@ -19,6 +19,7 @@ class Trainer:
         :param scheduler: lr scheduler
         """
         self.transformer_model = transformer_model.to(get_device())
+        self.transformer_model.apply(self.init_weights)
         self.optimizer = optimizer
         self.cross_entropy_loss = torch.nn.CrossEntropyLoss(ignore_index=self.transformer_model.padding_token)
         self.lr_scheduler = lr_scheduler
@@ -36,6 +37,18 @@ class Trainer:
                 return d_model ** -0.5 * min(step ** -0.5, step * warmup_steps ** -1.5)
 
             self.scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda)
+
+    @staticmethod
+    def init_weights(module):
+        if isinstance(module, torch.nn.Linear):
+            torch.nn.init.xavier_uniform_(module.weight)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, torch.nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0, std=0.02)
+        elif isinstance(module, torch.nn.LayerNorm):
+            torch.nn.init.ones_(module.weight)
+            torch.nn.init.zeros_(module.bias)
 
     def train(self, train_loader, n_epochs, val_loader=None, verbose=1, early=None, save_path=None):
         """
@@ -130,8 +143,7 @@ class Trainer:
             acc = self.calculate_accuracy(preds.view(-1, preds.shape[-1]),
                                                  target_sentences[:, 1:].reshape(-1).to(get_device()))
             train_acc += acc
-            progress_bar.set_postfix({"CE_Loss": loss.item()})
-            progress_bar.set_postfix({"Train_Acc": acc})
+            progress_bar.set_postfix({"CE_Loss": loss.item(), "Train_Acc": acc})
         if self.lr_scheduler:
             self.scheduler.step()
         return train_loss / len(train_loader), train_acc / len(train_loader)
