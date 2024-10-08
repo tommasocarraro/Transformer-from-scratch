@@ -11,7 +11,7 @@ def tokens_to_sentences(token_sequences, target_vocab, padding_token, eos_token)
     sentences = []
     for seq in token_sequences:
         # Convert the sequence of token indices to words
-        words = [target_vocab.itos[token.item()] for token in seq if
-                 token.item() != padding_token and token.item() != eos_token]
+        words = [target_vocab.itos[token.item()] for token in seq if token.item() != padding_token]
+        words = words[:words.index(eos_token)]
         sentences.append(' '.join(words))  # Join words to form a sentence
     return sentences
