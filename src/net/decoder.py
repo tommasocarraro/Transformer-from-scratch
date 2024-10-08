@@ -99,7 +99,7 @@ class TransformerDecoder(torch.nn.Module):
                                             for _ in range(num_layers)])
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, tokens, encoder_outputs, padding_mask_enc, padding_mask_dec=None):
+    def forward(self, tokens, encoder_outputs, padding_mask_enc, padding_mask_dec=None, pre_norm=False):
         """
         Forward pass of the transformer decoder.
 
@@ -109,11 +109,12 @@ class TransformerDecoder(torch.nn.Module):
         of the encoder
         :param padding_mask_dec: padding mask to avoid the padding token to be included in the attention computation of
         the decoder
+        :param pre_norm: whether to apply layer normalization before sublayer
         :return: encoder output
         """
         embeddings = self.embedding_layer(tokens)
         embeddings = self.positional_encoding(embeddings)
         embeddings = self.dropout(embeddings)
         for layer in self.decoder:
-            embeddings = layer(embeddings, encoder_outputs, padding_mask_enc, padding_mask_dec)
+            embeddings = layer(embeddings, encoder_outputs, padding_mask_enc, padding_mask_dec, pre_norm=pre_norm)
         return embeddings

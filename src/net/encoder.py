@@ -78,17 +78,18 @@ class TransformerEncoder(torch.nn.Module):
                                             for _ in range(num_layers)])
         self.dropout = torch.nn.Dropout(dropout)
 
-    def forward(self, tokens, padding_mask):
+    def forward(self, tokens, padding_mask, pre_norm):
         """
         Forward pass of the transformer encoder.
 
         :param tokens: input tokens
         :param padding_mask: mask to avoid the padding tokens to be included in the attention computation
+        :param pre_norm: whether to apply layer normalization before sublayer
         :return: encoder output
         """
         embeddings = self.embedding_layer(tokens)
         embeddings = self.positional_encoding(embeddings)
         embeddings = self.dropout(embeddings)
         for layer in self.encoder:
-            embeddings = layer(embeddings, padding_mask)
+            embeddings = layer(embeddings, padding_mask, pre_norm=pre_norm)
         return embeddings
