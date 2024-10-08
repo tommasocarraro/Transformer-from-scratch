@@ -73,8 +73,8 @@ class Trainer:
                 print("Epoch %d - Train loss %.3f - Train acc %.3f - Validation CE_Loss %.3f - Validation acc %.3f"
                       % (epoch + 1, train_loss, train_acc, val_score[0], val_score[1]))
             # save best model and update early stop counter, if necessary
-            if val_score > best_val_score:
-                best_val_score = val_score
+            if val_score[0] > best_val_score:
+                best_val_score = val_score[0]
                 early_counter = 0
                 if save_path:
                     self.save_model(save_path)
