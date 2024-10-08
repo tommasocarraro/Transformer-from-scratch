@@ -26,20 +26,34 @@ class EncoderLayer(torch.nn.Module):
         self.layer_norm_1 = torch.nn.LayerNorm(emb_size)
         self.layer_norm_2 = torch.nn.LayerNorm(emb_size)
 
-    def forward(self, embeddings, padding_mask):
+    def forward(self, embeddings, padding_mask, pre_norm=False):
         """
         Forward pass of the transformer encoder layer.
 
         :param embeddings: input token embeddings
         :param padding_mask: mask to avoid the padding tokens to be included in the attention computation
+        :param pre_norm: whether to apply layer normalization before sublayer
         :return: transformed token embeddings with attention
         """
-        attention_embeddings = self.attention(embeddings, embeddings, embeddings, padding_mask=padding_mask)
-        attention_embeddings = self.dropout(attention_embeddings)
-        intermediate_embeddings = self.layer_norm_1(embeddings + attention_embeddings)
-        feed_forward_embeddings = self.feed_forward(intermediate_embeddings)
-        feed_forward_embeddings = self.dropout(feed_forward_embeddings)
-        return self.layer_norm_2(intermediate_embeddings + feed_forward_embeddings)
+        if pre_norm:
+            norm_embeddings = self.layer_norm_1(embeddings)
+            attention_embeddings = self.attention(norm_embeddings, norm_embeddings, norm_embeddings,
+                                                  padding_mask=padding_mask)
+            attention_embeddings = self.dropout(attention_embeddings)
+            # here I sum normalized embeddings
+            intermediate_embeddings = norm_embeddings + attention_embeddings
+            norm_intermediate_embeddings = self.layer_norm_2(intermediate_embeddings)
+            feed_forward_embeddings = self.feed_forward(norm_intermediate_embeddings)
+            feed_forward_embeddings = self.dropout(feed_forward_embeddings)
+            # here, I sum normalized embeddings
+            return norm_intermediate_embeddings + feed_forward_embeddings
+        else:
+            attention_embeddings = self.attention(embeddings, embeddings, embeddings, padding_mask=padding_mask)
+            attention_embeddings = self.dropout(attention_embeddings)
+            intermediate_embeddings = self.layer_norm_1(embeddings + attention_embeddings)
+            feed_forward_embeddings = self.feed_forward(intermediate_embeddings)
+            feed_forward_embeddings = self.dropout(feed_forward_embeddings)
+            return self.layer_norm_2(intermediate_embeddings + feed_forward_embeddings)
 
 
 class TransformerEncoder(torch.nn.Module):
