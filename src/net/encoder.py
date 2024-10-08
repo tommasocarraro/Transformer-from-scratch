@@ -41,12 +41,12 @@ class EncoderLayer(torch.nn.Module):
                                                   padding_mask=padding_mask)
             attention_embeddings = self.dropout(attention_embeddings)
             # here I sum normalized embeddings
-            intermediate_embeddings = norm_embeddings + attention_embeddings
+            intermediate_embeddings = embeddings + attention_embeddings
             norm_intermediate_embeddings = self.layer_norm_2(intermediate_embeddings)
             feed_forward_embeddings = self.feed_forward(norm_intermediate_embeddings)
             feed_forward_embeddings = self.dropout(feed_forward_embeddings)
             # here, I sum normalized embeddings
-            return norm_intermediate_embeddings + feed_forward_embeddings
+            return intermediate_embeddings + feed_forward_embeddings
         else:
             attention_embeddings = self.attention(embeddings, embeddings, embeddings, padding_mask=padding_mask)
             attention_embeddings = self.dropout(attention_embeddings)

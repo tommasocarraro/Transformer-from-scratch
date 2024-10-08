@@ -10,18 +10,20 @@ class Trainer:
     Generic trainer for the translation task.
     """
 
-    def __init__(self, transformer_model, optimizer, lr_scheduler=False):
+    def __init__(self, transformer_model, optimizer, lr_scheduler=False, label_smoothing=0.0):
         """
         Initialize the trainer with the given transformer model.
 
         :param transformer_model: transformer model
         :param optimizer: optimizer
         :param scheduler: lr scheduler
+        :param label_smoothing: label smoothing
         """
         self.transformer_model = transformer_model.to(get_device())
         self.transformer_model.apply(self.init_weights)
         self.optimizer = optimizer
-        self.cross_entropy_loss = torch.nn.CrossEntropyLoss(ignore_index=self.transformer_model.padding_token)
+        self.cross_entropy_loss = torch.nn.CrossEntropyLoss(ignore_index=self.transformer_model.padding_token,
+                                                            label_smoothing=label_smoothing)
         self.lr_scheduler = lr_scheduler
         if lr_scheduler:
             def lr_lambda(step):

@@ -46,19 +46,19 @@ class DecoderLayer(torch.nn.Module):
             attention_embeddings = self.self_attention(norm_embeddings, norm_embeddings, norm_embeddings,
                                                        autoregressive_mask=True, padding_mask=padding_mask_dec)
             attention_embeddings = self.dropout(attention_embeddings)
-            intermediate_embeddings = norm_embeddings + attention_embeddings
+            intermediate_embeddings = embeddings + attention_embeddings
             norm_intermediate_embeddings = self.layer_norm_2(intermediate_embeddings)
             norm_encoder_outputs = self.layer_norm_2(encoder_outputs)
             # attention with key and values coming from encoder and queries from decoder
             intermediate_attention_embeddings = self.cross_attention(q=norm_intermediate_embeddings, k=norm_encoder_outputs,
                                                                      v=norm_encoder_outputs, padding_mask=padding_mask_enc)
             intermediate_attention_embeddings = self.dropout(intermediate_attention_embeddings)
-            pre_feed_forward = norm_intermediate_embeddings + intermediate_attention_embeddings
+            pre_feed_forward = intermediate_embeddings + intermediate_attention_embeddings
             norm_feed_forward = self.layer_norm_3(pre_feed_forward)
             # feed-forward network
             feed_forward_embeddings = self.feed_forward(norm_feed_forward)
             feed_forward_embeddings = self.dropout(feed_forward_embeddings)
-            return norm_feed_forward + feed_forward_embeddings
+            return pre_feed_forward + feed_forward_embeddings
         else:
             # masked attention
             attention_embeddings = self.self_attention(embeddings, embeddings, embeddings,
