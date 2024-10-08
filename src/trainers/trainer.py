@@ -54,10 +54,10 @@ class Trainer:
         val_loss = 0.0
         for batch_idx, (source_sentences, target_sentences) in enumerate(val_loader):
             with torch.no_grad():
-                preds = self.transformer_model(source_sentences.to(get_device()), target_sentences.to(get_device()))
-                loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]), torch.cat(
-                    [target_sentences[:, 1:], torch.full((target_sentences.shape[0], 1), target_sentences[0, -1])],
-                    dim=1).view(-1).to(get_device()))
+                preds = self.transformer_model(source_sentences.to(get_device()),
+                                               target_sentences[:, :-1].to(get_device()))
+                loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]),
+                                               target_sentences[:, 1:].reshape(-1).to(get_device()))
                 val_loss += loss.item()
         return val_loss / len(val_loader)
 
@@ -73,8 +73,9 @@ class Trainer:
         progress_bar = tqdm(train_loader, desc="Batches of epoch %d" % (epoch_idx, ), unit="batch")
         for batch_idx, (source_sentences, target_sentences) in enumerate(progress_bar):
             self.optimizer.zero_grad()
-            preds = self.transformer_model(source_sentences.to(get_device()), target_sentences.to(get_device()))
-            loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]), torch.cat([target_sentences[:, 1:], torch.full((target_sentences.shape[0], 1), target_sentences[0, -1])], dim=1).view(-1).to(get_device()))
+            preds = self.transformer_model(source_sentences.to(get_device()), target_sentences[:, :-1].to(get_device()))
+            loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]),
+                                           target_sentences[:, 1:].reshape(-1).to(get_device()))
             loss.backward()
             self.optimizer.step()
             train_loss += loss.item()
