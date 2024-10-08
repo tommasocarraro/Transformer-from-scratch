@@ -8,6 +8,7 @@ class Trainer:
     """
     Generic trainer for the translation task.
     """
+
     def __init__(self, transformer_model, optimizer):
         """
         Initialize the trainer with the given transformer model.
@@ -33,13 +34,13 @@ class Trainer:
         early_counter, best_val_score = 0, 0
         for epoch in range(n_epochs):
             # training step
-            train_loss = self.train_epoch(train_loader, epoch + 1)
+            train_loss, train_acc = self.train_epoch(train_loader, epoch + 1)
             # validation step
             val_score = self.validate(val_loader)
             # print epoch data
             if (epoch + 1) % verbose == 0:
-                print("Epoch %d - Train loss %.3f - Validation CE_Loss %.3f"
-                      % (epoch + 1, train_loss, val_score))
+                print("Epoch %d - Train loss %.3f - Train acc %.3f - Validation CE_Loss %.3f - Validation acc %.3f"
+                      % (epoch + 1, train_loss, train_acc, val_score[0], val_score[1]))
             # save best model and update early stop counter, if necessary
             if val_score > best_val_score:
                 best_val_score = val_score
@@ -77,15 +78,17 @@ class Trainer:
 
     def validate(self, val_loader):
         self.transformer_model.eval()
-        val_loss = 0.0
+        val_loss, val_acc = 0.0, 0.0
         for batch_idx, (source_sentences, target_sentences) in enumerate(val_loader):
             with torch.no_grad():
                 preds = self.transformer_model(source_sentences.to(get_device()),
                                                target_sentences[:, :-1].to(get_device()))
                 loss = self.cross_entropy_loss(preds.view(-1, preds.shape[-1]),
                                                target_sentences[:, 1:].reshape(-1).to(get_device()))
+                val_acc += self.calculate_accuracy(preds.view(-1, preds.shape[-1]),
+                                                   target_sentences[:, 1:].reshape(-1).to(get_device()))
                 val_loss += loss.item()
-        return val_loss / len(val_loader)
+        return val_loss / len(val_loader), val_acc / len(val_loader)
 
     def train_epoch(self, train_loader, epoch_idx):
         """
@@ -96,8 +99,8 @@ class Trainer:
         :return: loss function averaged over all batches
         """
         self.transformer_model.train()
-        train_loss = 0.0
-        progress_bar = tqdm(train_loader, desc="Batches of epoch %d" % (epoch_idx, ), unit="batch")
+        train_loss, train_acc = 0.0, 0.0
+        progress_bar = tqdm(train_loader, desc="Batches of epoch %d" % (epoch_idx,), unit="batch")
         for batch_idx, (source_sentences, target_sentences) in enumerate(progress_bar):
             self.optimizer.zero_grad()
             preds = self.transformer_model(source_sentences.to(get_device()), target_sentences[:, :-1].to(get_device()))
@@ -106,8 +109,12 @@ class Trainer:
             loss.backward()
             self.optimizer.step()
             train_loss += loss.item()
+            acc = self.calculate_accuracy(preds.view(-1, preds.shape[-1]),
+                                                 target_sentences[:, 1:].reshape(-1).to(get_device()))
+            train_acc += acc
             progress_bar.set_postfix({"CE_Loss": loss.item()})
-        return train_loss / len(train_loader)
+            progress_bar.set_postfix({"Train_Acc": acc})
+        return train_loss / len(train_loader), train_acc / len(train_loader)
 
     def infer(self, inference_loader, max_seq_len, target_vocab, padding_token, eos_token):
         """
@@ -126,3 +133,21 @@ class Trainer:
             preds = self.transformer_model.infer(source_sentences.to(get_device()), max_seq_len)
             predictions.append(preds)
         return tokens_to_sentences(torch.cat(predictions), target_vocab, padding_token, eos_token)
+
+    def calculate_accuracy(self, preds, target_sentences):
+        """
+        Calculate multiclass accuracy by comparing predicted tokens to target tokens.
+
+        :param preds: model predictions (batch_size, seq_len, vocab_size)
+        :param target_sentences: ground truth target sentences (batch_size, seq_len)
+        :return: accuracy score (percentage of correctly predicted tokens)
+        """
+        preds = preds.argmax(dim=-1)
+        # create mask to mask padding
+        mask = target_sentences != self.transformer_model.padding_token
+        # compute masked accuracy (only for non-padded tokens)
+        correct_predictions = (preds == target_sentences) & mask
+        correct_tokens = correct_predictions.sum().item()
+        # the sum only includes non-padded tokens
+        total_tokens = mask.sum().item()
+        return correct_tokens / total_tokens if total_tokens > 0 else 0.0
