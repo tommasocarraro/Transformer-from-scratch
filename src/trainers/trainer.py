@@ -105,7 +105,7 @@ class Trainer:
 
         :param path: path from which the model has to be loaded.
         """
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=get_device())
         self.transformer_model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
@@ -166,7 +166,7 @@ class Trainer:
         for batch_idx, (source_sentences, _) in enumerate(inference_loader):
             preds = self.transformer_model.infer(source_sentences.to(get_device()), max_seq_len)
             predictions.append(preds)
-        return tokens_to_sentences(torch.cat(predictions), target_vocab, padding_token, eos_token)
+        return tokens_to_sentences(predictions, target_vocab, padding_token, eos_token)
 
     def calculate_accuracy(self, preds, target_sentences):
         """

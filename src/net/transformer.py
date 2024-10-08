@@ -67,7 +67,7 @@ class TransformerNet(torch.nn.Module):
 
         # Store parallel generated sequences
         generated_sequences = []
-        eos_check = torch.zeros(batch_size, 1).to(get_device())
+        eos_check = torch.zeros(batch_size, 1, dtype=torch.bool).to(get_device())
 
         for _ in range(max_seq_length):
             decoder_output = self.decoder(decoder_input, encoder_output, padding_mask_enc=padding_mask_enc,
