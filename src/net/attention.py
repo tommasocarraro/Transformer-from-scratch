@@ -62,7 +62,7 @@ class Attention(torch.nn.Module):
         qk_softmax = torch.nn.functional.softmax(qk, dim=-1)
 
         # compute the result of attention
-        qkv = torch.matmul(qk_softmax, v_prime)
+        qkv = torch.matmul(qk_softmax, v_prime).transpose(1, 2)
 
         # compute final linear projection
-        return self.wo(qkv.view(-1, q_prime.shape[2], self.embedding_size))
+        return self.wo(qkv.reshape(-1, q_prime.shape[2], self.embedding_size))

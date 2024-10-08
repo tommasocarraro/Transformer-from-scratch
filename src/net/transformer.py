@@ -27,7 +27,7 @@ class TransformerNet(torch.nn.Module):
         super(TransformerNet, self).__init__()
         self.encoder = TransformerEncoder(voc_size_enc, emb_size, num_heads, hidden_size, dropout, num_layers)
         self.decoder = TransformerDecoder(voc_size_dec, emb_size, num_heads, hidden_size, dropout, num_layers)
-        self.linear_layer = torch.nn.Linear(emb_size, voc_size_dec, bias=True)
+        self.linear_layer = torch.nn.Linear(emb_size, voc_size_dec, bias=False)
         self.padding_token = padding_token
         self.sos_token = sos_token
         self.eos_token = eos_token
@@ -40,8 +40,8 @@ class TransformerNet(torch.nn.Module):
         :param tokens_dec: tokens in input to decoder
         :return: the transformer output (logits no probabilities)
         """
-        padding_mask_enc = (tokens_enc != self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
-        padding_mask_dec = (tokens_dec != self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
+        padding_mask_enc = (tokens_enc == self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
+        padding_mask_dec = (tokens_dec == self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
         encoder_out = self.encoder(tokens_enc, padding_mask_enc)
         decoder_out = self.decoder(tokens_dec, encoder_out, padding_mask_enc, padding_mask_dec)
         return self.linear_layer(decoder_out)
@@ -55,7 +55,7 @@ class TransformerNet(torch.nn.Module):
         :return: the predicted tokens in the target language
         """
         # get encoder output for the given source sentences
-        padding_mask_enc = (tokens_enc != self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
+        padding_mask_enc = (tokens_enc == self.padding_token).unsqueeze(1).unsqueeze(2).to(get_device())
         encoder_output = self.encoder(tokens_enc, padding_mask_enc)
 
         # initialize the input for the decoder with SOS tokens
