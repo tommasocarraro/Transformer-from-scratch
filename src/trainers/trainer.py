@@ -62,7 +62,7 @@ class Trainer:
         end of the training the best model weights are loaded
         :param save_path: path to save the model
         """
-        early_counter, best_val_score = 0, 1000
+        early_counter, best_val_score = 0, 0
         for epoch in range(n_epochs):
             # training step
             train_loss, train_acc = self.train_epoch(train_loader, epoch + 1)
@@ -73,8 +73,8 @@ class Trainer:
                 print("Epoch %d - Train loss %.3f - Train acc %.3f - Validation CE_Loss %.3f - Validation acc %.3f"
                       % (epoch + 1, train_loss, train_acc, val_score[0], val_score[1]))
             # save best model and update early stop counter, if necessary
-            if val_score[0] < best_val_score:
-                best_val_score = val_score[0]
+            if val_score[1] > best_val_score:
+                best_val_score = val_score[1]
                 early_counter = 0
                 if save_path:
                     self.save_model(save_path)
