@@ -54,7 +54,6 @@ class TransformerNet(torch.nn.Module):
 
         :param tokens_enc: tokens in input to encoder
         :param max_seq_length: maximum sequence length to stop the generation
-        :param pre_norm: whether to use pre-normalization instead of post-normalization for layer normalization
         :return: the predicted tokens in the target language
         """
         # get encoder output for the given source sentences

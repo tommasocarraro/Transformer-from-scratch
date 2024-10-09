@@ -3,6 +3,7 @@ from tqdm import tqdm
 from .utils import tokens_to_sentences
 from src import get_device
 from torch.optim.lr_scheduler import LambdaLR
+from src.data.utils import tokenize_, process_sentence
 
 
 class Trainer:
@@ -150,23 +151,27 @@ class Trainer:
             self.scheduler.step()
         return train_loss / len(train_loader), train_acc / len(train_loader)
 
-    def infer(self, inference_loader, max_seq_len, target_vocab, padding_token, eos_token):
+    def infer(self, sentences, max_seq_len, source_vocab, target_vocab, padding_token, eos_token):
         """
         Method for inference.
 
-        :param inference_loader: loader containing sentences that have to be translated
+        :param sentences: list of sentences that have to be translated
         :param max_seq_len: maximum length of the sentence
+        :param source_vocab: source vocabulary
         :param target_vocab: target vocabulary
         :param padding_token: padding token
         :param eos_token: eos token
         :return: translated sentences
         """
         self.transformer_model.eval()
-        predictions = []
-        for batch_idx, (source_sentences, _) in enumerate(inference_loader):
-            preds = self.transformer_model.infer(source_sentences.to(get_device()), max_seq_len)
-            predictions.append(preds)
-        return tokens_to_sentences(predictions, target_vocab, padding_token, eos_token)
+        # convert sentences into string tokens
+        if not isinstance(sentences, list):
+            sentences = [sentences]
+        sentences = [tokenize_(process_sentence(sentence)) for sentence in sentences]
+        tokenized_sentences = torch.tensor([[source_vocab.stoi[token] for token in sentence]
+                                            for sentence in sentences]).to(get_device())
+        preds = self.transformer_model.infer(tokenized_sentences.to(get_device()), max_seq_len)
+        return tokens_to_sentences(preds, target_vocab, padding_token, eos_token)
 
     def calculate_accuracy(self, preds, target_sentences):
         """

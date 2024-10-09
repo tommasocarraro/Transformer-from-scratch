@@ -38,6 +38,7 @@ class Dataset:
         # build vocabularies on tokenized sentences
         source_field.build_vocab(tokenized_source_sentences + tokenized_source_sentences_val)
         target_field.build_vocab(tokenized_target_sentences + tokenized_target_sentences_val)
+        self.source_vocab = source_field.vocab
         self.target_vocab = target_field.vocab
         # get vocab lengths
         self.source_vocab_length = len(source_field.vocab)
