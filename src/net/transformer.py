@@ -48,12 +48,11 @@ class TransformerNet(torch.nn.Module):
         decoder_out = self.decoder(tokens_dec, encoder_out, padding_mask_enc, padding_mask_dec, pre_norm=self.pre_norm)
         return self.linear_layer(decoder_out)
 
-    def infer(self, tokens_enc, max_seq_length):
+    def infer(self, tokens_enc):
         """
         It performs the prediction of the Transformer model given a source language sentence.
 
         :param tokens_enc: tokens in input to encoder
-        :param max_seq_length: maximum sequence length to stop the generation
         :return: the predicted tokens in the target language
         """
         # get encoder output for the given source sentences
@@ -68,7 +67,7 @@ class TransformerNet(torch.nn.Module):
         generated_sequences = []
         eos_check = torch.zeros(batch_size, 1, dtype=torch.bool).to(get_device())
 
-        for _ in range(max_seq_length):
+        for _ in range(tokens_enc.shape[1]):
             decoder_output = self.decoder(decoder_input, encoder_output, padding_mask_enc=padding_mask_enc,
                                           pre_norm=self.pre_norm)
             decoder_output = self.linear_layer(decoder_output)

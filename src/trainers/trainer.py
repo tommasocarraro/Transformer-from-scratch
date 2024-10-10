@@ -151,27 +151,19 @@ class Trainer:
             self.scheduler.step()
         return train_loss / len(train_loader), train_acc / len(train_loader)
 
-    def infer(self, sentences, max_seq_len, source_vocab, target_vocab, padding_token, eos_token):
+    def infer(self, sentences, dataset):
         """
         Method for inference.
 
         :param sentences: list of sentences that have to be translated
-        :param max_seq_len: maximum length of the sentence
-        :param source_vocab: source vocabulary
-        :param target_vocab: target vocabulary
-        :param padding_token: padding token
-        :param eos_token: eos token
+        :param dataset: dataset from which tokenizer and detokenizer are loaded
         :return: translated sentences
         """
         self.transformer_model.eval()
-        # convert sentences into string tokens
-        if not isinstance(sentences, list):
-            sentences = [sentences]
-        sentences = [tokenize_(process_sentence(sentence)) for sentence in sentences]
-        tokenized_sentences = torch.tensor([[source_vocab.stoi[token] for token in sentence]
-                                            for sentence in sentences]).to(get_device())
-        preds = self.transformer_model.infer(tokenized_sentences.to(get_device()), max_seq_len)
-        return tokens_to_sentences(preds, target_vocab, padding_token, eos_token)
+        # convert sentences into tokens for the model
+        tokenized_sentences = torch.tensor(dataset.source_lang_manager.process_sentences(sentences))
+        preds = self.transformer_model.infer(tokenized_sentences.to(get_device()))
+        return dataset.target_lang_manager.detokenize(preds.tolist())
 
     def calculate_accuracy(self, preds, target_sentences):
         """
